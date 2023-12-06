@@ -1,6 +1,10 @@
 variable "AWS_ACCESS_KEY" {}
 variable "AWS_SECRET_KEY" {}
 
+variable "group" {
+    type =  string
+    default = "group7"
+}
 variable "AWS_REGION" {
     type = string
     default = "eu-west-1"
@@ -22,5 +26,5 @@ variable "INGRESS_PORT_HTTP" {
 
 variable "instance_names" {
   type    = list
-  default = ["webserver-A", "webserver-B"]
+  default = ["group7-webserver-A", "group7-webserver-B"]
 }

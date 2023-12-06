@@ -15,29 +15,9 @@ resource "aws_key_pair" "deployer-key-lgr" {
   public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDAqcAT5IyVi+055RqiC+KZ/5+zKArowoqzf76p4RE2TCGVVS3fwp8A1RITPrKHJyQLUYZHJIb1PCAUxLQQ2y8YwbvNaepkJIaSUozIp/lctd0ZHApq2p2SW/4bbOoMVAYl5w+1qerjaaks/EaQO5T6t7aDVA6FW9GYdia/2wsP9FukGoG5cCOu+DbBbpTjGrJGOZULDleGhd+C8WGLEOQCnP9w+Qb+GHMNVtLRiBNeKj3zroit23ft0Ezxed7acCCFbzWGqCYklQlnhbeXlGT4EVwAdRSGnI+HOECRzFgjuRaxB0xcj6hDPQBVdlDT6b5x+eKUq4KOzgO8J30kjvCwZy64v00QgeVvn3p6MH43SSwozbt1p7sE40419k4jL6OT7V0nhjhXs3ycriWRZQWQfJq0T8pWPlXXhOgZmPg3R6fdseaweigjFwlMphGs2/iyx8Zl5P5pA2n/3q0aJ0wBmP/aJFNZY/dHWLvbeI5t7RtBP/RGA6n3idM+i7I9TM0= louis-guilhem@LUIGI"
 }
 
-resource "aws_instance" "webserver" {
-    count         = length(var.instance_names)
-    ami           = "ami-005e7be1c849abba7"
-    instance_type = var.instance_type
-
-    user_data = <<-EOF
-        #!/bin/bash
-        sudo su
-        yum update -y
-        yum install -y httpd
-        systemctl start httpd
-        systemctl enable httpd  
-        echo "Response coming from server ${var.instance_names[count.index]}" > /var/www/html/index.htm
-    EOF
-    tags = {
-        Name = var.instance_names[count.index]
-    }
- }
-
-
 resource "aws_security_group" "instance_sg" {
-    name = "terraform-test-sg"
-
+    name    = "${var.group}-terraform-test-sg"
+    vpc_id  = aws_vpc.main.id
     egress {
         from_port       = 0
         to_port         = 0
@@ -60,22 +40,92 @@ resource "aws_security_group" "instance_sg" {
     }
 }
 
-output "public_ips" {
-  value = {
-    for name, instance in aws_instance.webserver : name => instance.public_ip
-  }
+# resource "aws_instance" "webserver" {
+#     count           = length(var.instance_names)
+#     ami             = "ami-005e7be1c849abba7"
+#     instance_type   = var.instance_type
+#     security_groups = [aws_security_group.instance_sg.name]
+#     subnet_id       = aws_subnet.subnet{count.index}
+  
+
+#     user_data = <<-EOF
+#         #!/bin/bash
+#         sudo su
+#         yum update -y
+#         yum install -y httpd
+#         systemctl start httpd
+#         systemctl enable httpd  
+#         echo "Response coming from server ${var.instance_names[count.index]}" > /var/www/html/index.htm
+#     EOF
+
+#     tags = {
+#         Name = var.instance_names[count.index]
+#     }
+#  }
+
+ resource "aws_instance" "webserver-A" {
+    ami             = "ami-005e7be1c849abba7"
+    instance_type   = var.instance_type
+    security_groups = [aws_security_group.instance_sg.id]
+    subnet_id       = aws_subnet.subnet1.id
+  
+
+    user_data = <<-EOF
+        #!/bin/bash
+        sudo su
+        yum update -y
+        yum install -y httpd
+        systemctl start httpd
+        systemctl enable httpd  
+        echo "Response coming from server ${var.instance_names[0]}" > /var/www/html/index.html
+    EOF
+
+    tags = {
+        Name = var.instance_names[0]
+    }
+ }
+
+  resource "aws_instance" "webserver-B" {
+    ami             = "ami-005e7be1c849abba7"
+    instance_type   = var.instance_type
+    security_groups = [aws_security_group.instance_sg.id]
+    subnet_id       = aws_subnet.subnet2.id
+  
+
+    user_data = <<-EOF
+        #!/bin/bash
+        sudo su
+        yum update -y
+        yum install -y httpd
+        systemctl start httpd
+        systemctl enable httpd  
+        echo "Response coming from server ${var.instance_names[1]}" > /var/www/html/index.html
+    EOF
+
+    tags = {
+        Name = var.instance_names[1]
+    }
+ }
+
+
+output "public_ipA" {
+  value = aws_instance.webserver-A.public_ip
 }
 
+output "public_ipB" {
+  value = aws_instance.webserver-B.public_ip
+}
 
 resource "aws_lb_target_group" "web_server_tg" {
-  name       = "web-server-TG"
+  name       = "${var.group}-web-server-TG"
   port       = 80
   protocol   = "HTTP"
+  vpc_id     = aws_vpc.main.id
 
   health_check {
     enabled             = true
     port                = 80
-    interval            = 5
+    interval            = 6
     protocol            = "HTTP"
     path                = "/index.html"
     matcher             = "200"
@@ -85,19 +135,36 @@ resource "aws_lb_target_group" "web_server_tg" {
   }
 }
 
-resource "aws_lb_target_group_attachment" "target_group_attachment" {
-  for_each = aws_instance.webserver
+# resource "aws_lb_target_group_attachment" "target_group_attachment" {
+#   for_each = { for idx, instance in aws_instance.webserver : var.instance_names[idx] => instance }
+
+#   target_group_arn = aws_lb_target_group.web_server_tg.arn
+#   target_id        = each.value.id
+#   port             = 80
+# }
+
+resource "aws_lb_target_group_attachment" "target_group_attachment_A" {
 
   target_group_arn = aws_lb_target_group.web_server_tg.arn
-  target_id        = each.value.id
+  target_id        = aws_instance.webserver-A.id
   port             = 80
 }
 
+resource "aws_lb_target_group_attachment" "target_group_attachment" {
+
+  target_group_arn = aws_lb_target_group.web_server_tg.arn
+  target_id        = aws_instance.webserver-B.id
+  port             = 80
+}
 resource "aws_lb" "web_server_lb" {
-  name               = "Web-server-lb"
+  name               = "${var.group}-web-server-lb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.instance_sg.id]
+  subnets             = [
+    aws_subnet.subnet1.id,
+    aws_subnet.subnet2.id,
+  ]
 
 }
 
