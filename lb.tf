@@ -9,8 +9,10 @@ resource "aws_lb" "lb" {
   access_logs {
     bucket  = aws_s3_bucket.elb_log_bucket.id
     prefix  = "elb-logs-webinstance"
-    enabled = false
+    enabled = true
   }
+
+  depends_on = [aws_s3_bucket_policy.elb_log_bucket_policy]
 }
 
 resource "aws_lb_listener" "lb_listener" {
