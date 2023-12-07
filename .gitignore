@@ -35,4 +35,4 @@ terraform.rc
 
 # Ignore local ssh keys
 ssh-keys/*
-state/*
+local-state/*
