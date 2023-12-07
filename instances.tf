@@ -9,7 +9,7 @@ resource "aws_instance" "webserver_instance" {
   count                       = length(var.webserver_instance.names)
   key_name                    = aws_key_pair.instance_key_pair.key_name
   instance_type               = var.webserver_instance.type
-  ami                         = var.webserver_instance.ami
+  ami                         = data.aws_ami.amazon_linux_2.id
   subnet_id                   = aws_subnet.subnet[count.index].id
   vpc_security_group_ids      = [aws_security_group.security_group.id]
   associate_public_ip_address = true
