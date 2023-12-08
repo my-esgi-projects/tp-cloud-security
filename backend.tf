@@ -5,6 +5,6 @@ terraform {
   #   }
 
   backend "local" {
-    path = "local-state/terraform.state"
+    path = "infra-group-7.tfstate"
   }
 }
