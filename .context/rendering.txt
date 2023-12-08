@@ -1,0 +1,6 @@
+Rendu TP Groupe 7: S3 Log
+
+Git repository: https://github.com/my-esgi-projects/tp-cloud-security.git
+
+Experimental taf in: dev branch
+	* Using ami from data
